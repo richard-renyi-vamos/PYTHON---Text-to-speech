@@ -1,0 +1,65 @@
+import tkinter as tk
+from tkinter import filedialog
+import pyttsx3
+
+class TextToVoiceApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Text-to-Voice App")
+
+        # Adjusting the size of the text display window to be 200% bigger
+        self.textbox = tk.Text(self.root, wrap=tk.WORD, width=80, height=20)
+        self.textbox.pack(pady=10)
+
+        self.select_button = tk.Button(self.root, text="Select Text File", command=self.select_file)
+        self.select_button.pack(pady=5)
+
+        self.play_button = tk.Button(self.root, text="Play", command=self.play_text)
+        self.play_button.pack(pady=5)
+
+        self.engine = pyttsx3.init()
+        self.engine.connect('started-utterance', self.on_start)
+        self.engine.connect('finished-utterance', self.on_end)
+
+        self.sentences = []
+        self.current_sentence_index = 0
+
+    def select_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+        if file_path:
+            with open(file_path, 'r') as file:
+                self.sentences = file.readlines()
+        self.display_text()
+
+    def play_text(self):
+        if not self.sentences:
+            return
+        self.current_sentence_index = 0
+        for sentence in self.sentences:
+            self.engine.say(sentence.strip())
+        self.engine.runAndWait()
+
+    def on_start(self, name):
+        pass
+
+    def on_end(self, name, completed):
+        self.current_sentence_index += 1
+        if self.current_sentence_index < len(self.sentences):
+            self.highlight_current_sentence()
+
+    def display_text(self):
+        self.textbox.delete(1.0, tk.END)
+        for sentence in self.sentences:
+            self.textbox.insert(tk.END, sentence)
+
+    def highlight_current_sentence(self):
+        self.textbox.tag_remove("active_sentence", "1.0", tk.END)
+        start = self.textbox.index(f"1.{len(''.join(self.sentences[:self.current_sentence_index]))}")
+        end = self.textbox.index(f"1.{len(''.join(self.sentences[:self.current_sentence_index+1]))}")
+        self.textbox.tag_add("active_sentence", start, end)
+        self.textbox.tag_config("active_sentence", background="#FFFF00", alpha=0.5)  # Transparent yellow
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = TextToVoiceApp(root)
+    root.mainloop()
